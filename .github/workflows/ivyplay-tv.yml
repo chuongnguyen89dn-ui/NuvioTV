@@ -1,0 +1,49 @@
+name: IvyPlay TV APK
+
+on:
+  push:
+    branches: [ivyplay-tv]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ivyplay-tv-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build IvyPlay TV fullDebug APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+      - name: Prepare local properties
+        run: |
+          touch local.properties
+          touch local.dev.properties
+      - name: Prepare CI signing config
+        run: |
+          keytool -genkeypair -v -keystore "$RUNNER_TEMP/ci-debug.jks" -storepass android -alias androiddebugkey -keypass android -dname "CN=IvyPlay TV,O=IvyPlay,C=VN" -keyalg RSA -keysize 2048 -validity 10000
+          {
+            echo "NUVIO_RELEASE_STORE_FILE=$RUNNER_TEMP/ci-debug.jks"
+            echo "NUVIO_RELEASE_KEY_ALIAS=androiddebugkey"
+            echo "NUVIO_RELEASE_KEY_PASSWORD=android"
+            echo "NUVIO_RELEASE_STORE_PASSWORD=android"
+          } >> "$GITHUB_ENV"
+      - name: Test updater and build APK
+        run: ./gradlew :app:testFullDebugUnitTest --tests 'com.nuvio.tv.updater.*' :app:assembleFullDebug --stacktrace
+      - name: Upload IvyPlay TV APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: IvyPlay-TV-fullDebug
+          path: app/build/outputs/apk/full/debug/app-full-universal-debug.apk
+          if-no-files-found: error
+          retention-days: 14
