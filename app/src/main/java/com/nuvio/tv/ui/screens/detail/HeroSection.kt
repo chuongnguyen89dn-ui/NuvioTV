@@ -181,7 +181,7 @@ fun HeroContentSection(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .height(540.dp),
+            .height(500.dp) // IvyPlay TV: tighter cinematic detail hero,
         verticalArrangement = Arrangement.Bottom
     ) {
         Column(
@@ -326,7 +326,7 @@ fun HeroContentSection(
                             color = NuvioTheme.extendedColors.textSecondary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.fillMaxWidth(0.6f)
+                            modifier = Modifier.fillMaxWidth(0.54f)
                         )
                         Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
                     }
