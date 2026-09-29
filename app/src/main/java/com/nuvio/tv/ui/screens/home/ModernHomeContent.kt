@@ -646,15 +646,15 @@ fun ModernHomeContent(
 
     val portraitBaseWidth = uiState.posterCardWidthDp.dp
     val portraitBaseHeight = uiState.posterCardHeightDp.dp
-    val portraitModernPosterScale = 1.08f
-    val landscapeModernPosterScale = 1.34f
+    val portraitModernPosterScale = 0.98f // IvyPlay TV: denser poster rail
+    val landscapeModernPosterScale = 1.18f // IvyPlay TV: more titles visible per row
     val portraitCatalogCardWidth = portraitBaseWidth * 0.84f * portraitModernPosterScale
     val portraitCatalogCardHeight = portraitBaseHeight * 0.84f * portraitModernPosterScale
     val landscapeCatalogCardWidth = portraitBaseWidth * 1.24f * landscapeModernPosterScale
     val landscapeCatalogCardHeight = landscapeCatalogCardWidth / 1.77f
     // Poster style reuses the portrait catalog dimensions so its artwork matches the catalogs below it.
     val continueWatchingStyle = uiState.continueWatchingCardStyle
-    val continueWatchingScale = 1.34f
+    val continueWatchingScale = 1.20f // IvyPlay TV: compact wide resume cards
     val continueWatchingCardWidth = when (continueWatchingStyle) {
         ContinueWatchingCardStyle.POSTER -> portraitCatalogCardWidth
         // Wide still scales with the poster width setting so it matches the rest of the row.
@@ -673,7 +673,7 @@ fun ModernHomeContent(
 
     Box(modifier = Modifier.fillMaxSize().background(NuvioTheme.colors.Background)) {
             val posterCardCornerRadius = remember(uiState.posterCardCornerRadiusDp) { uiState.posterCardCornerRadiusDp.dp }
-            val rowHorizontalPadding = 52.dp
+            val rowHorizontalPadding = 44.dp // IvyPlay TV: tighter Plex/Stremio-inspired rail alignment
 
             val activeCarouselItemState = remember(carouselRows, rowByKey) {
                 derivedStateOf {
