@@ -221,21 +221,21 @@ internal fun ModernHeroGradientLayer(
             }
             .drawWithCache {
                 val fullScreen = isFullScreen()
-                val horizontalFadeEndX = size.width * if (fullScreen) 0.65f else 0.45f
+                val horizontalFadeEndX = size.width * if (fullScreen) 0.72f else 0.56f
                 val colorStops = if (fullScreen) {
                     arrayOf(
                         0.0f to bgColor,
-                        0.22f to bgColor.copy(alpha = 0.90f),
-                        0.46f to bgColor.copy(alpha = 0.80f),
-                        0.76f to bgColor.copy(alpha = 0.42f),
+                        0.20f to bgColor.copy(alpha = 0.94f),
+                        0.48f to bgColor.copy(alpha = 0.74f),
+                        0.80f to bgColor.copy(alpha = 0.30f),
                         1.0f to Color.Transparent
                     )
                 } else {
                     arrayOf(
                         0.0f to bgColor,
-                        0.22f to bgColor.copy(alpha = 0.86f),
-                        0.46f to bgColor.copy(alpha = 0.56f),
-                        0.76f to bgColor.copy(alpha = 0.16f),
+                        0.20f to bgColor.copy(alpha = 0.92f),
+                        0.48f to bgColor.copy(alpha = 0.50f),
+                        0.82f to bgColor.copy(alpha = 0.10f),
                         1.0f to Color.Transparent
                     )
                 }
@@ -253,7 +253,7 @@ internal fun ModernHeroGradientLayer(
                     )
                 }
 
-                val bottomStripStartY = size.height * if (fullScreen) 0.64f else 0.82f
+                val bottomStripStartY = size.height * if (fullScreen) 0.68f else 0.86f
                 val verticalGradient = Brush.verticalGradient(
                     colorStops = if (fullScreen) {
                         arrayOf(
