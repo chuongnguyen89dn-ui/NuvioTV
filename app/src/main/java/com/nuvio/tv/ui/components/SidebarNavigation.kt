@@ -1,6 +1,7 @@
 package com.nuvio.tv.ui.components
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -66,9 +67,13 @@ fun SidebarNavigation(
     onFocusChange: (Boolean) -> Unit,
     onNavigate: (String) -> Unit
 ) {
-    val sidebarWidth = NuvioTheme.sizes.sidebar.expandedWidth
+    // IvyPlay TV keeps a slim icon rail visible and expands labels only on focus.
+    val sidebarWidth by animateDpAsState(
+        targetValue = if (isExpanded) NuvioTheme.sizes.sidebar.expandedWidth else 72.dp,
+        label = "ivySidebarWidth"
+    )
     val sidebarAlpha by animateFloatAsState(
-        targetValue = if (isExpanded) 1f else 0f,
+        targetValue = if (isExpanded) 1f else 0.94f,
         label = "sidebarAlpha"
     )
 
@@ -78,27 +83,29 @@ fun SidebarNavigation(
             .fillMaxHeight()
             .graphicsLayer { alpha = sidebarAlpha }
             .background(NuvioTheme.colors.BackgroundElevated)
-            .padding(vertical = NuvioTheme.spacing.xl, horizontal = NuvioTheme.spacing.lg)
+            .padding(vertical = NuvioTheme.spacing.xl, horizontal = if (isExpanded) NuvioTheme.spacing.lg else NuvioTheme.spacing.sm)
             .onFocusChanged { state ->
                 onFocusChange(state.hasFocus)
                 onExpandedChange(state.hasFocus)
             },
         verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
     ) {
-        Text(
-            text = stringResource(R.string.app_name).uppercase(),
-            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-            color = NuvioTheme.colors.Primary
-        )
-
-        Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
+        if (isExpanded) {
+            Text(
+                text = stringResource(R.string.app_name).uppercase(),
+                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                color = NuvioTheme.colors.Primary
+            )
+            Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
+        }
 
         items.forEach { item ->
             SidebarNavItem(
                 item = item,
                 isSelected = item.route == selectedRoute,
                 focusRequester = if (item.route == selectedRoute) focusRequester else null,
-                onNavigate = onNavigate
+                onNavigate = onNavigate,
+                showLabel = isExpanded
             )
         }
     }
@@ -110,7 +117,8 @@ private fun SidebarNavItem(
     item: SidebarItem,
     isSelected: Boolean,
     focusRequester: FocusRequester?,
-    onNavigate: (String) -> Unit
+    onNavigate: (String) -> Unit,
+    showLabel: Boolean
 ) {
     var isFocused by remember { mutableStateOf(false) }
     val backgroundColor by animateColorAsState(
@@ -167,11 +175,13 @@ private fun SidebarNavItem(
             )
         }
 
-        Text(
-            text = item.label,
-            style = MaterialTheme.typography.titleMedium,
-            color = if (isFocused || isSelected) NuvioTheme.colors.TextPrimary else NuvioTheme.colors.TextSecondary
-        )
+        if (showLabel) {
+            Text(
+                text = item.label,
+                style = MaterialTheme.typography.titleMedium,
+                color = if (isFocused || isSelected) NuvioTheme.colors.TextPrimary else NuvioTheme.colors.TextSecondary
+            )
+        }
     }
     }
 }
