@@ -12,6 +12,7 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.preferencesDataStore
 import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.UserProfile
+import com.nuvio.tv.domain.model.IvyPlayContentMode
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -179,7 +180,8 @@ internal data class ProfileJson(
     val avatarId: String? = null,
     val avatarUrl: String? = null,
     val profileBackgroundId: String? = null,
-    val profileBackgroundUrl: String? = null
+    val profileBackgroundUrl: String? = null,
+    val contentMode: String = IvyPlayContentMode.STANDARD.name
 ) {
     fun toDomain() = UserProfile(
         id = id,
@@ -190,7 +192,8 @@ internal data class ProfileJson(
         avatarId = avatarId,
         avatarUrl = avatarUrl,
         profileBackgroundId = profileBackgroundId,
-        profileBackgroundUrl = profileBackgroundUrl
+        profileBackgroundUrl = profileBackgroundUrl,
+        contentMode = IvyPlayContentMode.fromStorage(contentMode)
     )
 
     companion object {
@@ -203,7 +206,8 @@ internal data class ProfileJson(
             avatarId = profile.avatarId,
             avatarUrl = profile.avatarUrl,
             profileBackgroundId = profile.profileBackgroundId,
-            profileBackgroundUrl = profile.profileBackgroundUrl
+            profileBackgroundUrl = profile.profileBackgroundUrl,
+            contentMode = profile.contentMode.name
         )
     }
 }
