@@ -16,6 +16,7 @@ import com.nuvio.tv.data.remote.supabase.SupabaseProfilePinVerifyResult
 import com.nuvio.tv.data.repository.MemberAccessRepository
 import com.nuvio.tv.domain.model.CosmeticEntitlement
 import com.nuvio.tv.domain.model.UserProfile
+import com.nuvio.tv.domain.model.IvyPlayContentMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
@@ -186,6 +187,7 @@ class ProfileSelectionViewModel @Inject constructor(
         avatarId: String? = null,
         copyFromProfileId: Int? = null,
         copyProviderCredentials: Boolean = false,
+        contentMode: IvyPlayContentMode = IvyPlayContentMode.STANDARD,
         onComplete: (CreateProfileResult) -> Unit = {}
     ) {
         if (_isCreating.value) return
@@ -196,7 +198,13 @@ class ProfileSelectionViewModel @Inject constructor(
                     name = name,
                     avatarColorHex = avatarColorHex,
                     avatarId = avatarId
-                )
+                )?.let { created ->
+                    if (created.contentMode != contentMode) {
+                        val updated = created.copy(contentMode = contentMode)
+                        profileManager.updateProfile(updated)
+                        updated
+                    } else created
+                }
                 if (profile != null) {
                     profileSyncService.pushToRemote()
                     val copyResult = copyFromProfileId?.let { sourceProfileId ->
