@@ -481,6 +481,9 @@ internal fun PlayerRuntimeController.initializePlayer(
             )
             val isHlsStream = isHls || resolvedStreamMime == MimeTypes.APPLICATION_M3U8
             val isDashStream = resolvedStreamMime == MimeTypes.APPLICATION_MPD
+            if (isHlsStream || isDashStream) {
+                Log.i(PlayerRuntimeController.TAG, "AUTO_QUALITY_ENABLED protocol=${if (isDashStream) "DASH" else "HLS"} host=${url.safeHost()}")
+            }
             val parallelActive = playerSettings.parallelNetworkEnabled && playerSettings.useParallelConnections
             val useChunkSessionSource = parallelActive && !isHlsStream && !isDashStream
 
@@ -1844,6 +1847,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                             totalBytesLoaded = totalBytesLoaded,
                             bitrateEstimate = bitrateEstimate
                         )
+                        Log.d(PlayerRuntimeController.TAG, "BANDWIDTH_ESTIMATE bps=$bitrateEstimate")
                     }
 
                     override fun onLoadStarted(
