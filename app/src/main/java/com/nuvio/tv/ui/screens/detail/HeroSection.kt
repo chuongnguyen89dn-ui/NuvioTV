@@ -181,7 +181,7 @@ fun HeroContentSection(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .height(500.dp) // IvyPlay TV: tighter cinematic detail hero,
+            .height(500.dp), // IvyPlay TV: tighter cinematic detail hero
         verticalArrangement = Arrangement.Bottom
     ) {
         Column(
