@@ -105,6 +105,7 @@ import com.nuvio.tv.core.sync.SetProfilePinResult
 import com.nuvio.tv.data.remote.supabase.AvatarCatalogItem
 import com.nuvio.tv.data.remote.supabase.ProfileBackgroundCatalogItem
 import com.nuvio.tv.domain.model.UserProfile
+import com.nuvio.tv.domain.model.IvyPlayContentMode
 import com.nuvio.tv.ui.components.AvatarPickerGrid
 import com.nuvio.tv.ui.components.CustomProfileBackgroundImage
 import com.nuvio.tv.ui.components.MemberBrandWordmark
@@ -542,13 +543,14 @@ fun ProfileSelectionScreen(
                 avatarCatalog = avatarCatalog,
                 isCreating = isCreating,
                 onDismiss = { if (!isCreating) showCreateProfile = false },
-                onCreateProfile = { name, colorHex, avatarId, copyFromProfileId, copyProviderCredentials ->
+                onCreateProfile = { name, colorHex, avatarId, copyFromProfileId, copyProviderCredentials, contentMode ->
                     viewModel.createProfile(
                         name = name,
                         avatarColorHex = colorHex,
                         avatarId = avatarId,
                         copyFromProfileId = copyFromProfileId,
-                        copyProviderCredentials = copyProviderCredentials
+                        copyProviderCredentials = copyProviderCredentials,
+                        contentMode = contentMode
                     ) { result ->
                         when (result) {
                             is CreateProfileResult.Created -> {
@@ -1398,7 +1400,8 @@ private fun CreateProfileOverlay(
         colorHex: String,
         avatarId: String?,
         copyFromProfileId: Int?,
-        copyProviderCredentials: Boolean
+        copyProviderCredentials: Boolean,
+        contentMode: IvyPlayContentMode
     ) -> Unit
 ) {
     BackHandler(onBack = onDismiss)
@@ -1409,6 +1412,7 @@ private fun CreateProfileOverlay(
     var focusedAvatarName by remember { mutableStateOf<String?>(null) }
     var selectedCopySourceId by remember { mutableStateOf<Int?>(null) }
     var copyProviderCredentials by remember { mutableStateOf(false) }
+    var contentMode by remember { mutableStateOf(IvyPlayContentMode.STANDARD) }
     var showSettingsSourceDialog by remember { mutableStateOf(false) }
     val selectedAvatar = remember(avatarCatalog, selectedAvatarId) {
         avatarCatalog.find { it.id == selectedAvatarId }
@@ -1489,7 +1493,8 @@ private fun CreateProfileOverlay(
                                 selectedColorHex,
                                 selectedAvatarId,
                                 selectedCopySourceId,
-                                copyProviderCredentials
+                                copyProviderCredentials,
+                                contentMode
                             )
                         }
                     )
@@ -1497,6 +1502,27 @@ private fun CreateProfileOverlay(
             }
 
             Spacer(modifier = Modifier.height(NuvioTheme.spacing.xl))
+
+            Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)) {
+                OverlayButton(
+                    text = "IvyPlay",
+                    isPrimary = contentMode == IvyPlayContentMode.STANDARD,
+                    enabled = !isCreating,
+                    onClick = { contentMode = IvyPlayContentMode.STANDARD }
+                )
+                OverlayButton(
+                    text = "YouTube",
+                    isPrimary = contentMode == IvyPlayContentMode.YOUTUBE,
+                    enabled = !isCreating,
+                    onClick = { contentMode = IvyPlayContentMode.YOUTUBE }
+                )
+            }
+            Text(
+                text = if (contentMode == IvyPlayContentMode.YOUTUBE) "Hồ sơ YouTube riêng - không ảnh hưởng hồ sơ IvyPlay" else "Hồ sơ IvyPlay tiêu chuẩn",
+                color = NuvioTheme.colors.TextSecondary,
+                fontSize = 14.sp
+            )
+            Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
 
             Row(
                 modifier = Modifier
