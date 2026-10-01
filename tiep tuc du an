@@ -1,0 +1,15 @@
+TIEP TUC DU AN — IVYPLAY / IVYPLAY TV
+
+CAP NHAT 2026-10-02
+- Repo: chuongnguyen89dn-ui/NuvioTV; nhanh lam viec hien tai: dev.
+- Day la repo client chinh cho he thong IvyPlay, khong tach mobile/Android TV/iPhone thanh cac du an rieng neu cung mot codebase/tinh nang.
+- Muc tieu Android TV: IvyPlay TV, nhe cho TV box, baseline Android TV 4.x+, giao dien gan Nuvio nhung branding IvyPlay; khong de Nuvio xuat hien trong UI Ivy.
+- Logo TV da chot cach dat chu "TV" nho gan/ben tren chu y dai trong "Play", khong dung ten "Ivy TV".
+- YouTube: profile rieng trong Tao ho so, co logo YouTube, avatar/image thay vi loading placeholder; Home/layout YouTube rieng theo cau truc channel that -> normalized model -> Ivy render.
+- Playback Quality trong khu YouTube: Auto mac dinh; chi hien resolution/variant thuc te; Auto dung adaptive playback HLS/DASH; doi manual quality trong cung session, khong restart/seek; uu tien start nhanh roi moi tang quality.
+- Android/Android TV uu tien Media3/ExoPlayer; iOS uu tien AVPlayer/AVFoundation/bridge hien co. Log yeu cau gom AUTO_QUALITY_ENABLED, BANDWIDTH_ESTIMATE, QUALITY_CHANGED, MANUAL_QUALITY_SELECTED.
+- iPhone build: khong dung simulator-only lam artifact. Chi coi IPA hoan thanh sau khi artifact that duoc xac minh va build/log xanh.
+- Loi Swift MPVPlayerBridge quanh dong 1426 da tung duoc sua; commit tham chieu 5bee25127fdd608a765cd5e11b03d99df0ec6eb8.
+- Resolver YouTube Khoai nam o repo Toolchecklink, khong copy code/handoff resolver vao repo nay; Ivy chi tich hop model/behavior/UI.
+- Moi thay doi phai build -> kiem tra status/log -> sua neu loi -> build lai -> xac minh truoc khi bao thanh cong.
+- Day la handoff dau tien cua file nay; cac moc tiep theo append, khong lap lai.
