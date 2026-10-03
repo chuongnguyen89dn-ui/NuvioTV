@@ -76,3 +76,5 @@ jobs:
           archive: false
           if-no-files-found: error
           retention-days: 14
+
+# navigation wiring verified on ivyplay-tv-v2
