@@ -1,0 +1,25 @@
+{
+  "id": "com.chuong.av01.test",
+  "version": "1.0.0",
+  "name": "AV01 Test",
+  "description": "Local AV01 playback test catalog for Nuvio",
+  "logo": "https://www.av01.media/favicon.ico",
+  "resources": [
+    "catalog",
+    "meta",
+    "stream"
+  ],
+  "types": [
+    "movie"
+  ],
+  "idPrefixes": [
+    "av01:"
+  ],
+  "catalogs": [
+    {
+      "type": "movie",
+      "id": "av01-test",
+      "name": "AV01 Test"
+    }
+  ]
+}
