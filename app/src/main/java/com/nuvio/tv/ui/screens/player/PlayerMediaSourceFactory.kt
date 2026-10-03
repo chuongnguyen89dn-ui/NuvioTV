@@ -10,6 +10,7 @@ import androidx.media3.common.NuvioEngineConfig
 import androidx.media3.database.StandaloneDatabaseProvider
 import androidx.media3.datasource.DataSink
 import androidx.media3.datasource.DataSource
+import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.cache.Cache
 import androidx.media3.datasource.cache.CacheDataSink
 import androidx.media3.datasource.cache.CacheDataSource
@@ -301,7 +302,12 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         }
 
         val mediaSource = when {
-            isHls && !forceDefaultFactory -> HlsMediaSource.Factory(httpDataSourceFactory)
+            isHls && !forceDefaultFactory -> {
+                val adaptiveDataSourceFactory: DataSource.Factory =
+                    if (url.startsWith("data:application/vnd.apple.mpegurl", ignoreCase = true)) {
+                        DefaultDataSource.Factory(context, httpDataSourceFactory)
+                    } else httpDataSourceFactory
+                HlsMediaSource.Factory(adaptiveDataSourceFactory)
                 .setAllowChunklessPreparation(true)
                 .setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
                 .createMediaSource(mediaItem)
@@ -820,6 +826,9 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
             filename: String?,
             responseHeaders: Map<String, String>? = null
         ): String? {
+            if (url.startsWith("data:application/vnd.apple.mpegurl", ignoreCase = true)) {
+                return MimeTypes.APPLICATION_M3U8
+            }
             val adaptiveMime = inferAdaptiveMimeTypeFromPath(filename)
                 ?: inferAdaptiveMimeTypeFromPath(url)
             if (adaptiveMime != null) {
