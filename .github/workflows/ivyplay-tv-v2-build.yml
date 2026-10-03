@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: ivyplay-tv-v2-${{ github.ref }}
@@ -20,6 +20,71 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ensure YouTube profiles route through TV Home
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt')
+          text = path.read_text()
+
+          import_line = 'import com.nuvio.tv.ui.screens.youtube.IvyPlayYouTubeHomeGate\n'
+          anchor_import = 'import com.nuvio.tv.ui.screens.home.HeroBackdropState\n'
+          if import_line not in text:
+              if anchor_import not in text:
+                  raise SystemExit('Import anchor not found')
+              text = text.replace(anchor_import, anchor_import + import_line, 1)
+
+          if '            IvyPlayYouTubeHomeGate(\n' not in text:
+              start = '            HomeScreen(\n'
+              if start not in text:
+                  raise SystemExit('HomeScreen start anchor not found')
+              text = text.replace(
+                  start,
+                  '            IvyPlayYouTubeHomeGate(\n'
+                  '                navController = navController,\n'
+                  '                standardContent = {\n'
+                  '                    HomeScreen(\n',
+                  1,
+              )
+
+              end = '''                onNavigateToFolderDetail = { collectionId, folderId ->
+                    navController.navigate(Screen.FolderDetail.createRoute(collectionId, folderId))
+                }
+            )
+        }
+
+        composable(
+'''
+              replacement = '''                onNavigateToFolderDetail = { collectionId, folderId ->
+                    navController.navigate(Screen.FolderDetail.createRoute(collectionId, folderId))
+                }
+                    )
+                }
+            )
+        }
+
+        composable(
+'''
+              if end not in text:
+                  raise SystemExit('HomeScreen end anchor not found')
+              text = text.replace(end, replacement, 1)
+
+          path.write_text(text)
+          PY
+
+          if ! git diff --quiet; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt
+            git commit -m 'feat(ivyplaytv): route YouTube profiles through TV home'
+            git push origin HEAD:ivyplay-tv-v2
+            exit 0
+          fi
 
       - name: Set up Java
         uses: actions/setup-java@v4
