@@ -1,0 +1,88 @@
+name: IvyPlayTV Wire YouTube Home
+
+on:
+  push:
+    branches:
+      - ivyplay-tv-v2
+    paths:
+      - .github/workflows/ivyplay-tv-wire-home.yml
+
+permissions:
+  contents: write
+
+jobs:
+  wire-home:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ivyplay-tv-v2
+          fetch-depth: 0
+
+      - name: Wire profile-aware YouTube Home into Nuvio navigation
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt')
+          text = path.read_text()
+
+          import_line = 'import com.nuvio.tv.ui.screens.youtube.IvyPlayYouTubeHomeGate\n'
+          anchor_import = 'import com.nuvio.tv.ui.screens.home.HeroBackdropState\n'
+          if import_line not in text:
+              if anchor_import not in text:
+                  raise SystemExit('Import anchor not found')
+              text = text.replace(anchor_import, anchor_import + import_line, 1)
+
+          start = '            HomeScreen(\n'
+          if '            IvyPlayYouTubeHomeGate(\n' not in text:
+              if start not in text:
+                  raise SystemExit('HomeScreen start anchor not found')
+              text = text.replace(
+                  start,
+                  '            IvyPlayYouTubeHomeGate(\n'
+                  '                navController = navController,\n'
+                  '                standardContent = {\n'
+                  '                    HomeScreen(\n',
+                  1,
+              )
+
+              end = '''                onNavigateToFolderDetail = { collectionId, folderId ->
+                    navController.navigate(Screen.FolderDetail.createRoute(collectionId, folderId))
+                }
+            )
+        }
+
+        composable(
+'''
+              replacement = '''                onNavigateToFolderDetail = { collectionId, folderId ->
+                    navController.navigate(Screen.FolderDetail.createRoute(collectionId, folderId))
+                }
+                    )
+                }
+            )
+        }
+
+        composable(
+'''
+              if end not in text:
+                  raise SystemExit('HomeScreen end anchor not found')
+              text = text.replace(end, replacement, 1)
+
+          path.write_text(text)
+          PY
+
+      - name: Commit navigation wiring
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo 'No changes required.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt
+          git commit -m 'feat(ivyplaytv): route YouTube profiles through TV home'
+          git push origin HEAD:ivyplay-tv-v2
