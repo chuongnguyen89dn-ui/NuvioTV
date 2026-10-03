@@ -61,6 +61,7 @@ private enum class IvyPlayYouTubeTvTab(val label: String, val icon: ImageVector)
 @Composable
 fun IvyPlayYouTubeTvScreen(
     modifier: Modifier = Modifier,
+    profileName: String = "You",
     onVideoClick: (IvyPlayYouTubeVideo) -> Unit = {},
 ) {
     var selectedTab by remember { mutableStateOf(IvyPlayYouTubeTvTab.HOME) }
@@ -115,16 +116,16 @@ fun IvyPlayYouTubeTvScreen(
                     modifier = Modifier.size(38.dp).clip(CircleShape).background(Color(0xFF1565C0)),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text("I", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text(profileName.take(1).uppercase(), color = Color.White, fontWeight = FontWeight.Bold)
                 }
             }
 
             Box(Modifier.fillMaxSize().padding(horizontal = 28.dp, vertical = 18.dp)) {
                 when (selectedTab) {
                     IvyPlayYouTubeTvTab.HOME -> IvyPlayYouTubeHomeContent(channels, onVideoClick)
-                    IvyPlayYouTubeTvTab.SHORTS -> IvyPlayYouTubeTvPlaceholder("Shorts", "Shorts đang được đồng bộ cùng nguồn dữ liệu mobile")
+                    IvyPlayYouTubeTvTab.SHORTS -> IvyPlayYouTubeShortsContent(channels, onVideoClick)
                     IvyPlayYouTubeTvTab.SUBSCRIPTIONS -> IvyPlayYouTubeSubscriptionsContent(channels, onVideoClick)
-                    IvyPlayYouTubeTvTab.YOU -> IvyPlayYouTubeTvPlaceholder("You", "Profile YouTube dùng chung hệ thống profile IvyPlay")
+                    IvyPlayYouTubeTvTab.YOU -> IvyPlayYouTubeYouContent(profileName, channels)
                 }
             }
         }
@@ -158,6 +159,24 @@ private fun IvyPlayYouTubeHomeContent(
 }
 
 @Composable
+private fun IvyPlayYouTubeShortsContent(
+    channels: List<IvyPlayYouTubeChannelSnapshot>,
+    onVideoClick: (IvyPlayYouTubeVideo) -> Unit,
+) {
+    val shorts = channels.flatMap { it.shorts }.distinctBy { it.videoId }
+    if (shorts.isEmpty()) {
+        IvyPlayYouTubeTvPlaceholder(
+            "Shorts",
+            "Nguồn YouTube hiện chưa trả danh sách Shorts riêng. IvyPlayTV sẽ hiển thị khi resolver đồng bộ được dữ liệu Shorts.",
+        )
+        return
+    }
+    LazyColumn(verticalArrangement = Arrangement.spacedBy(28.dp)) {
+        item { IvyPlayYouTubeShelf("Shorts", shorts, onVideoClick) }
+    }
+}
+
+@Composable
 private fun IvyPlayYouTubeSubscriptionsContent(
     channels: List<IvyPlayYouTubeChannelSnapshot>,
     onVideoClick: (IvyPlayYouTubeVideo) -> Unit,
@@ -176,6 +195,24 @@ private fun IvyPlayYouTubeSubscriptionsContent(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun IvyPlayYouTubeYouContent(
+    profileName: String,
+    channels: List<IvyPlayYouTubeChannelSnapshot>,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
+        Text(profileName, color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+        Text("IvyPlay YouTube profile", color = Color(0xFFAAAAAA), fontSize = 18.sp)
+        Spacer(Modifier.height(8.dp))
+        Text("Subscriptions", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+        Text(
+            if (channels.isEmpty()) "Đang tải…" else "${channels.size} kênh đang được đồng bộ trên TV",
+            color = Color(0xFFAAAAAA),
+            fontSize = 16.sp,
+        )
     }
 }
 
