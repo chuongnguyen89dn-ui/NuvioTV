@@ -7,6 +7,7 @@ import androidx.media3.common.util.UnstableApi
 import com.nuvio.tv.core.debrid.DirectDebridPlayableResult
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.core.player.StreamAutoPlaySelector
+import com.nuvio.tv.core.player.Av01PlaybackResolver
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.data.local.StreamAutoPlaySource
@@ -773,6 +774,21 @@ internal fun PlayerRuntimeController.switchToSourceStream(
     sourceStreamsScope = null
     sourceStreamsJob = null
     streamRepository.setLocalPluginSearchPaused(true)
+
+    if (stream.getStreamUrl()?.startsWith("av01:", ignoreCase = true) == true) {
+        debridResolveJob?.cancel()
+        _uiState.update { it.copy(isLoadingSourceStreams = true, sourceStreamsError = null) }
+        debridResolveJob = scope.launch {
+            try {
+                val resolvedUrl = Av01PlaybackResolver(context).resolve(stream.getStreamUrl()!!)
+                switchToSourceStream(stream.copy(url = resolvedUrl), fromEpisodePanel = false)
+            } catch (error: Exception) {
+                _uiState.update { it.copy(isLoadingSourceStreams = false, sourceStreamsError = "AV01 resolve failed: " + (error.message ?: error.javaClass.simpleName)) }
+            } finally { debridResolveJob = null }
+        }
+        return
+    }
+
     if (openExternalStreamInBrowser(stream = stream, fromEpisodePanel = false)) {
         return
     }
@@ -1322,6 +1338,20 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(
     forcedTargetVideo: Video? = null,
     isAutoPlay: Boolean = false
 ) {
+    if (stream.getStreamUrl()?.startsWith("av01:", ignoreCase = true) == true) {
+        debridResolveJob?.cancel()
+        _uiState.update { it.copy(isLoadingEpisodeStreams = true, episodeStreamsError = null) }
+        debridResolveJob = scope.launch {
+            try {
+                val resolvedUrl = Av01PlaybackResolver(context).resolve(stream.getStreamUrl()!!)
+                switchToEpisodeStream(stream.copy(url = resolvedUrl), forcedTargetVideo, isAutoPlay)
+            } catch (error: Exception) {
+                _uiState.update { it.copy(isLoadingEpisodeStreams = false, episodeStreamsError = "AV01 resolve failed: " + (error.message ?: error.javaClass.simpleName)) }
+            } finally { debridResolveJob = null }
+        }
+        return
+    }
+
     if (openExternalStreamInBrowser(stream = stream, fromEpisodePanel = true)) {
         return
     }
