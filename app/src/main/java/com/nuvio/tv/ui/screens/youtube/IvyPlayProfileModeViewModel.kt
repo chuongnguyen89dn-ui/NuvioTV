@@ -25,4 +25,15 @@ class IvyPlayProfileModeViewModel @Inject constructor(
         started = SharingStarted.Eagerly,
         initialValue = profileManager.activeProfile?.contentMode ?: IvyPlayContentMode.STANDARD,
     )
+
+    val activeProfileName: StateFlow<String> = combine(
+        profileManager.activeProfileId,
+        profileManager.profiles,
+    ) { activeProfileId, profiles ->
+        profiles.firstOrNull { it.id == activeProfileId }?.name ?: "You"
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.Eagerly,
+        initialValue = profileManager.activeProfile?.name ?: "You",
+    )
 }
