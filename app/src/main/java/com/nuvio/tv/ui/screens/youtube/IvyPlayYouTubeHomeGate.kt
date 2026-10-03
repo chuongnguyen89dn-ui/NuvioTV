@@ -1,7 +1,9 @@
 package com.nuvio.tv.ui.screens.youtube
 
+import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
@@ -18,27 +20,39 @@ fun IvyPlayYouTubeHomeGate(
     navController: NavHostController,
     standardContent: @Composable () -> Unit,
     viewModel: IvyPlayProfileModeViewModel = hiltViewModel(),
+    playbackViewModel: IvyPlayYouTubePlaybackViewModel = hiltViewModel(),
 ) {
     val contentMode by viewModel.activeContentMode.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     when (contentMode) {
         IvyPlayContentMode.STANDARD -> standardContent()
         IvyPlayContentMode.YOUTUBE -> IvyPlayYouTubeTvScreen(
             onVideoClick = { video ->
-                navController.navigate(
-                    Screen.Player.createRoute(
-                        streamUrl = video.url,
-                        title = video.title,
-                        streamName = video.channelName,
-                        contentId = video.videoId,
-                        contentType = "youtube",
-                        contentName = video.title,
-                        poster = video.thumbnail,
-                        videoId = video.videoId,
-                        returnToHomeOnBack = true,
-                        addonName = "IvyPlay YouTube",
+                playbackViewModel.resolve(video.url) { resolvedUrl ->
+                    if (resolvedUrl.isNullOrBlank()) {
+                        Toast.makeText(
+                            context,
+                            "Không thể lấy luồng YouTube cho video này",
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                        return@resolve
+                    }
+                    navController.navigate(
+                        Screen.Player.createRoute(
+                            streamUrl = resolvedUrl,
+                            title = video.title,
+                            streamName = video.channelName,
+                            contentId = video.videoId,
+                            contentType = "youtube",
+                            contentName = video.title,
+                            poster = video.thumbnail,
+                            videoId = video.videoId,
+                            returnToHomeOnBack = true,
+                            addonName = "IvyPlay YouTube",
+                        )
                     )
-                )
+                }
             },
         )
     }
