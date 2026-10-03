@@ -25,7 +25,7 @@ class IvyPlayYouTubePlaybackViewModel @Inject constructor(
         resolveJob?.cancel()
         resolveJob = viewModelScope.launch {
             val resolved = try {
-                extractor.extractSingleUrl(youtubeUrl).takeIf { it.isNotBlank() }
+                extractor.extractSingleUrl(youtubeUrl)?.takeIf { it.isNotBlank() }
             } catch (error: CancellationException) {
                 throw error
             } catch (_: Exception) {
