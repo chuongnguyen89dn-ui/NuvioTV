@@ -1,0 +1,12 @@
+{
+  "streams": [
+    {
+      "name": "AV01 Native",
+      "title": "Resolve on Play",
+      "url": "av01:221131",
+      "behaviorHints": {
+        "filename": "av01.m3u8"
+      }
+    }
+  ]
+}
