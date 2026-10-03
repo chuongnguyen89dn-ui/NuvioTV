@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.youtube
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
@@ -23,6 +24,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Search
@@ -66,9 +68,14 @@ fun IvyPlayYouTubeTvScreen(
 ) {
     var selectedTab by remember { mutableStateOf(IvyPlayYouTubeTvTab.HOME) }
     var channels by remember { mutableStateOf<List<IvyPlayYouTubeChannelSnapshot>>(emptyList()) }
+    var selectedChannel by remember { mutableStateOf<IvyPlayYouTubeChannelSnapshot?>(null) }
 
     LaunchedEffect(Unit) {
         channels = IvyPlayYouTubeFeedRepository.loadDefaultChannels()
+    }
+
+    BackHandler(enabled = selectedChannel != null) {
+        selectedChannel = null
     }
 
     Row(modifier.fillMaxSize().background(Color.Black)) {
@@ -87,8 +94,11 @@ fun IvyPlayYouTubeTvScreen(
             IvyPlayYouTubeTvTab.entries.forEach { tab ->
                 IvyPlayYouTubeTvNavItem(
                     tab = tab,
-                    selected = selectedTab == tab,
-                    onClick = { selectedTab = tab },
+                    selected = selectedChannel == null && selectedTab == tab,
+                    onClick = {
+                        selectedChannel = null
+                        selectedTab = tab
+                    },
                 )
                 if (tab == IvyPlayYouTubeTvTab.SUBSCRIPTIONS) Spacer(Modifier.weight(1f))
             }
@@ -121,11 +131,28 @@ fun IvyPlayYouTubeTvScreen(
             }
 
             Box(Modifier.fillMaxSize().padding(horizontal = 28.dp, vertical = 18.dp)) {
-                when (selectedTab) {
-                    IvyPlayYouTubeTvTab.HOME -> IvyPlayYouTubeHomeContent(channels, onVideoClick)
-                    IvyPlayYouTubeTvTab.SHORTS -> IvyPlayYouTubeShortsContent(channels, onVideoClick)
-                    IvyPlayYouTubeTvTab.SUBSCRIPTIONS -> IvyPlayYouTubeSubscriptionsContent(channels, onVideoClick)
-                    IvyPlayYouTubeTvTab.YOU -> IvyPlayYouTubeYouContent(profileName, channels)
+                val channel = selectedChannel
+                if (channel != null) {
+                    IvyPlayYouTubeChannelContent(
+                        snapshot = channel,
+                        onBack = { selectedChannel = null },
+                        onVideoClick = onVideoClick,
+                    )
+                } else {
+                    when (selectedTab) {
+                        IvyPlayYouTubeTvTab.HOME -> IvyPlayYouTubeHomeContent(
+                            channels = channels,
+                            onVideoClick = onVideoClick,
+                            onChannelClick = { selectedChannel = it },
+                        )
+                        IvyPlayYouTubeTvTab.SHORTS -> IvyPlayYouTubeShortsContent(channels, onVideoClick)
+                        IvyPlayYouTubeTvTab.SUBSCRIPTIONS -> IvyPlayYouTubeSubscriptionsContent(
+                            channels = channels,
+                            onVideoClick = onVideoClick,
+                            onChannelClick = { selectedChannel = it },
+                        )
+                        IvyPlayYouTubeTvTab.YOU -> IvyPlayYouTubeYouContent(profileName, channels)
+                    }
                 }
             }
         }
@@ -136,6 +163,7 @@ fun IvyPlayYouTubeTvScreen(
 private fun IvyPlayYouTubeHomeContent(
     channels: List<IvyPlayYouTubeChannelSnapshot>,
     onVideoClick: (IvyPlayYouTubeVideo) -> Unit,
+    onChannelClick: (IvyPlayYouTubeChannelSnapshot) -> Unit,
 ) {
     if (channels.isEmpty()) {
         IvyPlayYouTubeTvPlaceholder("Home", "Đang tải Khoai Lang Thang và HOA BAN FOOD…")
@@ -149,9 +177,10 @@ private fun IvyPlayYouTubeHomeContent(
         channels.forEach { snapshot ->
             item(key = snapshot.channel.channelId) {
                 IvyPlayYouTubeShelf(
-                    snapshot.channel.displayName ?: snapshot.channel.name,
-                    snapshot.videos.take(10),
-                    onVideoClick,
+                    title = snapshot.channel.displayName ?: snapshot.channel.name,
+                    videos = snapshot.videos.take(10),
+                    onVideoClick = onVideoClick,
+                    onTitleClick = { onChannelClick(snapshot) },
                 )
             }
         }
@@ -180,6 +209,7 @@ private fun IvyPlayYouTubeShortsContent(
 private fun IvyPlayYouTubeSubscriptionsContent(
     channels: List<IvyPlayYouTubeChannelSnapshot>,
     onVideoClick: (IvyPlayYouTubeVideo) -> Unit,
+    onChannelClick: (IvyPlayYouTubeChannelSnapshot) -> Unit,
 ) {
     if (channels.isEmpty()) {
         IvyPlayYouTubeTvPlaceholder("Subscriptions", "Đang tải kênh đã theo dõi…")
@@ -189,11 +219,59 @@ private fun IvyPlayYouTubeSubscriptionsContent(
         channels.forEach { snapshot ->
             item(key = "sub-${snapshot.channel.channelId}") {
                 IvyPlayYouTubeShelf(
-                    snapshot.channel.displayName ?: snapshot.channel.name,
-                    snapshot.videos.take(10),
-                    onVideoClick,
+                    title = snapshot.channel.displayName ?: snapshot.channel.name,
+                    videos = snapshot.videos.take(10),
+                    onVideoClick = onVideoClick,
+                    onTitleClick = { onChannelClick(snapshot) },
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun IvyPlayYouTubeChannelContent(
+    snapshot: IvyPlayYouTubeChannelSnapshot,
+    onBack: () -> Unit,
+    onVideoClick: (IvyPlayYouTubeVideo) -> Unit,
+) {
+    LazyColumn(verticalArrangement = Arrangement.spacedBy(24.dp)) {
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    onClick = onBack,
+                    shape = CircleShape,
+                    color = Color(0xFF272727),
+                ) {
+                    Icon(
+                        Icons.Default.ArrowBack,
+                        contentDescription = "Back",
+                        tint = Color.White,
+                        modifier = Modifier.padding(10.dp).size(24.dp),
+                    )
+                }
+                Spacer(Modifier.width(18.dp))
+                Column {
+                    Text(
+                        snapshot.channel.displayName ?: snapshot.channel.name,
+                        color = Color.White,
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    snapshot.channel.handle?.let {
+                        Text(it, color = Color(0xFFAAAAAA), fontSize = 16.sp)
+                    }
+                }
+            }
+        }
+        if (snapshot.videos.isNotEmpty()) {
+            item { IvyPlayYouTubeShelf("Videos", snapshot.videos, onVideoClick) }
+        }
+        if (snapshot.shorts.isNotEmpty()) {
+            item { IvyPlayYouTubeShelf("Shorts", snapshot.shorts, onVideoClick) }
+        }
+        if (snapshot.live.isNotEmpty()) {
+            item { IvyPlayYouTubeShelf("Live", snapshot.live, onVideoClick) }
         }
     }
 }
@@ -221,9 +299,26 @@ private fun IvyPlayYouTubeShelf(
     title: String,
     videos: List<IvyPlayYouTubeVideo>,
     onVideoClick: (IvyPlayYouTubeVideo) -> Unit,
+    onTitleClick: (() -> Unit)? = null,
 ) {
     Column {
-        Text(title, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        if (onTitleClick == null) {
+            Text(title, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        } else {
+            Surface(
+                onClick = onTitleClick,
+                shape = RoundedCornerShape(8.dp),
+                color = Color.Transparent,
+            ) {
+                Text(
+                    title,
+                    color = Color.White,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                )
+            }
+        }
         Spacer(Modifier.height(14.dp))
         LazyRow(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
             items(videos, key = { it.videoId }) { video ->
