@@ -9,7 +9,9 @@ data class UserProfile(
     val avatarId: String? = null,
     val avatarUrl: String? = null,
     val profileBackgroundId: String? = null,
-    val profileBackgroundUrl: String? = null
+    val profileBackgroundUrl: String? = null,
+    val contentMode: IvyPlayContentMode = IvyPlayContentMode.STANDARD
 ) {
     val isPrimary: Boolean get() = id == 1
+    val isYouTubeProfile: Boolean get() = contentMode == IvyPlayContentMode.YOUTUBE
 }
