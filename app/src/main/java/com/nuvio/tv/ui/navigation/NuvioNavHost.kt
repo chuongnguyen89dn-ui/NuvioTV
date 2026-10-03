@@ -55,6 +55,7 @@ import com.nuvio.tv.ui.screens.profile.ProfileSelectionMode
 import com.nuvio.tv.ui.screens.profile.ProfileSelectionScreen
 import com.nuvio.tv.ui.screens.tmdb.TmdbEntityBrowseScreen
 import com.nuvio.tv.ui.screens.home.HeroBackdropState
+import com.nuvio.tv.ui.screens.youtube.IvyPlayYouTubeHomeGate
 
 @Composable
 fun NuvioNavHost(
@@ -212,7 +213,10 @@ private fun PlaybackNavHost(
                 }
             }
 
-            HomeScreen(
+            IvyPlayYouTubeHomeGate(
+                navController = navController,
+                standardContent = {
+                    HomeScreen(
                 onNavigateToDetail = { itemId, itemType, addonBaseUrl ->
                     val heroBackdrop = HeroBackdropState.consumeAndClear()
                     navController.navigate(
@@ -254,6 +258,8 @@ private fun PlaybackNavHost(
                 },
                 onNavigateToFolderDetail = { collectionId, folderId ->
                     navController.navigate(Screen.FolderDetail.createRoute(collectionId, folderId))
+                }
+                    )
                 }
             )
         }
