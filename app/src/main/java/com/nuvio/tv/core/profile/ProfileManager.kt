@@ -4,6 +4,7 @@ import android.content.Context
 import com.nuvio.tv.R
 import com.nuvio.tv.data.local.ProfileDataStore
 import com.nuvio.tv.data.local.ProfileDataStoreFactory
+import com.nuvio.tv.domain.model.IvyPlayContentMode
 import com.nuvio.tv.domain.model.UserProfile
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
@@ -59,6 +60,12 @@ class ProfileManager @Inject constructor(
     val activeProfile: UserProfile?
         get() = profiles.value.find { it.id == activeProfileId.value }
 
+    val activeContentMode: IvyPlayContentMode
+        get() = activeProfile?.contentMode ?: IvyPlayContentMode.STANDARD
+
+    val isYouTubeProfileActive: Boolean
+        get() = activeContentMode == IvyPlayContentMode.YOUTUBE
+
     val isPrimaryProfileActive: Boolean
         get() = activeProfileId.value == 1
 
@@ -67,9 +74,7 @@ class ProfileManager @Inject constructor(
 
     suspend fun setActiveProfile(id: Int) {
         val exists = profiles.value.any { it.id == id }
-        if (exists) {
-            profileDataStore.setActiveProfile(id)
-        }
+        if (exists) profileDataStore.setActiveProfile(id)
     }
 
     suspend fun setRememberLastProfileEnabled(enabled: Boolean) {
@@ -89,7 +94,8 @@ class ProfileManager @Inject constructor(
         avatarColorHex: String,
         usesPrimaryAddons: Boolean = false,
         usesPrimaryPlugins: Boolean = false,
-        avatarId: String? = null
+        avatarId: String? = null,
+        contentMode: IvyPlayContentMode = IvyPlayContentMode.STANDARD
     ): UserProfile? {
         val current = profiles.value
         if (current.size >= MAX_PROFILES) return null
@@ -103,7 +109,8 @@ class ProfileManager @Inject constructor(
             avatarColorHex = avatarColorHex,
             usesPrimaryAddons = usesPrimaryAddons,
             usesPrimaryPlugins = usesPrimaryPlugins,
-            avatarId = avatarId
+            avatarId = avatarId,
+            contentMode = contentMode
         )
         factory.markProfileCreated(nextId)
         profileDataStore.upsertProfile(profile)
@@ -135,15 +142,11 @@ class ProfileManager @Inject constructor(
         val dataStoreDir = File(context.filesDir, "datastore")
         if (dataStoreDir.exists()) {
             dataStoreDir.listFiles()?.forEach { file ->
-                if (file.name.endsWith(suffixWithExtension)) {
-                    file.delete()
-                }
+                if (file.name.endsWith(suffixWithExtension)) file.delete()
             }
         }
 
         val pluginCodeDir = File(context.filesDir, "plugin_code_p${profileId}")
-        if (pluginCodeDir.exists()) {
-            pluginCodeDir.deleteRecursively()
-        }
+        if (pluginCodeDir.exists()) pluginCodeDir.deleteRecursively()
     }
 }
