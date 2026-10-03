@@ -23,11 +23,13 @@ fun IvyPlayYouTubeHomeGate(
     playbackViewModel: IvyPlayYouTubePlaybackViewModel = hiltViewModel(),
 ) {
     val contentMode by viewModel.activeContentMode.collectAsStateWithLifecycle()
+    val profileName by viewModel.activeProfileName.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     when (contentMode) {
         IvyPlayContentMode.STANDARD -> standardContent()
         IvyPlayContentMode.YOUTUBE -> IvyPlayYouTubeTvScreen(
+            profileName = profileName,
             onVideoClick = { video ->
                 playbackViewModel.resolve(video.url) { resolvedUrl ->
                     if (resolvedUrl.isNullOrBlank()) {
