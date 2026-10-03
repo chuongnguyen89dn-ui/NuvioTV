@@ -64,6 +64,7 @@ private enum class IvyPlayYouTubeTvTab(val label: String, val icon: ImageVector)
 fun IvyPlayYouTubeTvScreen(
     modifier: Modifier = Modifier,
     profileName: String = "You",
+    onProfileClick: () -> Unit = {},
     onVideoClick: (IvyPlayYouTubeVideo) -> Unit = {},
 ) {
     var selectedTab by remember { mutableStateOf(IvyPlayYouTubeTvTab.HOME) }
@@ -122,11 +123,15 @@ fun IvyPlayYouTubeTvScreen(
                     }
                 }
                 Spacer(Modifier.width(18.dp))
-                Box(
-                    modifier = Modifier.size(38.dp).clip(CircleShape).background(Color(0xFF1565C0)),
-                    contentAlignment = Alignment.Center,
+                Surface(
+                    onClick = onProfileClick,
+                    modifier = Modifier.size(38.dp),
+                    shape = CircleShape,
+                    color = Color(0xFF1565C0),
                 ) {
-                    Text(profileName.take(1).uppercase(), color = Color.White, fontWeight = FontWeight.Bold)
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(profileName.take(1).uppercase(), color = Color.White, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
 
@@ -151,7 +156,11 @@ fun IvyPlayYouTubeTvScreen(
                             onVideoClick = onVideoClick,
                             onChannelClick = { selectedChannel = it },
                         )
-                        IvyPlayYouTubeTvTab.YOU -> IvyPlayYouTubeYouContent(profileName, channels)
+                        IvyPlayYouTubeTvTab.YOU -> IvyPlayYouTubeYouContent(
+                            profileName = profileName,
+                            channels = channels,
+                            onProfileClick = onProfileClick,
+                        )
                     }
                 }
             }
@@ -280,6 +289,7 @@ private fun IvyPlayYouTubeChannelContent(
 private fun IvyPlayYouTubeYouContent(
     profileName: String,
     channels: List<IvyPlayYouTubeChannelSnapshot>,
+    onProfileClick: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
         Text(profileName, color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
@@ -291,6 +301,20 @@ private fun IvyPlayYouTubeYouContent(
             color = Color(0xFFAAAAAA),
             fontSize = 16.sp,
         )
+        Spacer(Modifier.height(8.dp))
+        Surface(
+            onClick = onProfileClick,
+            shape = RoundedCornerShape(12.dp),
+            color = Color(0xFF272727),
+        ) {
+            Text(
+                "Switch profile",
+                color = Color.White,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
+            )
+        }
     }
 }
 
