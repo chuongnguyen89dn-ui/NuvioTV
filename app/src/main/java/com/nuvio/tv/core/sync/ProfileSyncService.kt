@@ -8,8 +8,9 @@ import com.nuvio.tv.data.local.ProfileDataStore
 import com.nuvio.tv.data.remote.supabase.SupabaseProfileLockState
 import com.nuvio.tv.data.remote.supabase.SupabaseProfile
 import com.nuvio.tv.data.remote.supabase.SupabaseProfilePinVerifyResult
-import com.nuvio.tv.domain.model.UserProfile
 import com.nuvio.tv.domain.model.AuthState
+import com.nuvio.tv.domain.model.IvyPlayContentMode
+import com.nuvio.tv.domain.model.UserProfile
 import io.github.jan.supabase.postgrest.Postgrest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -114,7 +115,17 @@ class ProfileSyncService @Inject constructor(
 
                 Log.d(TAG, "pullFromRemote: fetched ${remote.size} profiles from Supabase")
 
+                // The current remote profile schema does not carry IvyPlay contentMode yet.
+                // Preserve the local mode for matching profile IDs so a normal profile sync
+                // cannot silently turn an active YouTube profile back into STANDARD.
+                val localContentModes = profileManager.profiles.value.associate { it.id to it.contentMode }
+
                 val profiles = remote.map { entry ->
+                    val contentMode = localContentModes[entry.profileIndex] ?: when {
+                        entry.name.trim().equals("YouTube", ignoreCase = true) -> IvyPlayContentMode.YOUTUBE
+                        entry.name.trim().equals("IvyPlay YouTube", ignoreCase = true) -> IvyPlayContentMode.YOUTUBE
+                        else -> IvyPlayContentMode.STANDARD
+                    }
                     UserProfile(
                         id = entry.profileIndex,
                         name = entry.name,
@@ -124,7 +135,8 @@ class ProfileSyncService @Inject constructor(
                         avatarId = entry.avatarId,
                         avatarUrl = entry.avatarUrl,
                         profileBackgroundId = entry.profileBackgroundId,
-                        profileBackgroundUrl = entry.profileBackgroundUrl
+                        profileBackgroundUrl = entry.profileBackgroundUrl,
+                        contentMode = contentMode
                     )
                 }
 
