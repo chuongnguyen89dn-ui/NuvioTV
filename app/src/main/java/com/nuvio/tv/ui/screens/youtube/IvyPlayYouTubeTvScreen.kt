@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SmartDisplay
 import androidx.compose.material.icons.filled.Subscriptions
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -70,13 +71,21 @@ fun IvyPlayYouTubeTvScreen(
     var selectedTab by remember { mutableStateOf(IvyPlayYouTubeTvTab.HOME) }
     var channels by remember { mutableStateOf<List<IvyPlayYouTubeChannelSnapshot>>(emptyList()) }
     var selectedChannel by remember { mutableStateOf<IvyPlayYouTubeChannelSnapshot?>(null) }
+    var searchMode by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
         channels = IvyPlayYouTubeFeedRepository.loadDefaultChannels()
     }
 
-    BackHandler(enabled = selectedChannel != null) {
-        selectedChannel = null
+    BackHandler(enabled = selectedChannel != null || searchMode) {
+        when {
+            selectedChannel != null -> selectedChannel = null
+            searchMode -> {
+                searchMode = false
+                searchQuery = ""
+            }
+        }
     }
 
     Row(modifier.fillMaxSize().background(Color.Black)) {
@@ -95,8 +104,10 @@ fun IvyPlayYouTubeTvScreen(
             IvyPlayYouTubeTvTab.entries.forEach { tab ->
                 IvyPlayYouTubeTvNavItem(
                     tab = tab,
-                    selected = selectedChannel == null && selectedTab == tab,
+                    selected = !searchMode && selectedChannel == null && selectedTab == tab,
                     onClick = {
+                        searchMode = false
+                        searchQuery = ""
                         selectedChannel = null
                         selectedTab = tab
                     },
@@ -112,14 +123,22 @@ fun IvyPlayYouTubeTvScreen(
             ) {
                 Text("YouTube", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.weight(1f))
-                Surface(shape = RoundedCornerShape(22.dp), color = Color(0xFF272727)) {
+                Surface(
+                    onClick = {
+                        selectedChannel = null
+                        searchMode = true
+                    },
+                    shape = RoundedCornerShape(22.dp),
+                    color = if (searchMode) Color.White else Color(0xFF272727),
+                ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Icon(Icons.Default.Search, contentDescription = "Search", tint = Color.White)
+                        val searchColor = if (searchMode) Color.Black else Color.White
+                        Icon(Icons.Default.Search, contentDescription = "Search", tint = searchColor)
                         Spacer(Modifier.width(10.dp))
-                        Text("Search", color = Color.White)
+                        Text("Search", color = searchColor)
                     }
                 }
                 Spacer(Modifier.width(18.dp))
@@ -137,14 +156,23 @@ fun IvyPlayYouTubeTvScreen(
 
             Box(Modifier.fillMaxSize().padding(horizontal = 28.dp, vertical = 18.dp)) {
                 val channel = selectedChannel
-                if (channel != null) {
-                    IvyPlayYouTubeChannelContent(
+                when {
+                    channel != null -> IvyPlayYouTubeChannelContent(
                         snapshot = channel,
                         onBack = { selectedChannel = null },
                         onVideoClick = onVideoClick,
                     )
-                } else {
-                    when (selectedTab) {
+                    searchMode -> IvyPlayYouTubeSearchContent(
+                        channels = channels,
+                        query = searchQuery,
+                        onQueryChange = { searchQuery = it },
+                        onVideoClick = onVideoClick,
+                        onChannelClick = {
+                            searchMode = false
+                            selectedChannel = it
+                        },
+                    )
+                    else -> when (selectedTab) {
                         IvyPlayYouTubeTvTab.HOME -> IvyPlayYouTubeHomeContent(
                             channels = channels,
                             onVideoClick = onVideoClick,
@@ -164,6 +192,77 @@ fun IvyPlayYouTubeTvScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun IvyPlayYouTubeSearchContent(
+    channels: List<IvyPlayYouTubeChannelSnapshot>,
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onVideoClick: (IvyPlayYouTubeVideo) -> Unit,
+    onChannelClick: (IvyPlayYouTubeChannelSnapshot) -> Unit,
+) {
+    val normalized = query.trim()
+    val matchingChannels = if (normalized.isBlank()) {
+        channels
+    } else {
+        channels.filter {
+            it.channel.name.contains(normalized, ignoreCase = true) ||
+                it.channel.displayName.orEmpty().contains(normalized, ignoreCase = true) ||
+                it.channel.handle.orEmpty().contains(normalized, ignoreCase = true)
+        }
+    }
+    val matchingVideos = channels
+        .flatMap { it.videos + it.shorts + it.live }
+        .distinctBy { it.videoId }
+        .filter {
+            normalized.isBlank() ||
+                it.title.contains(normalized, ignoreCase = true) ||
+                it.channelName.orEmpty().contains(normalized, ignoreCase = true)
+        }
+
+    LazyColumn(verticalArrangement = Arrangement.spacedBy(24.dp)) {
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Search", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = onQueryChange,
+                    modifier = Modifier.fillMaxWidth(0.68f),
+                    singleLine = true,
+                    placeholder = { Text("Search videos or channels") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                )
+            }
+        }
+        if (matchingChannels.isNotEmpty()) {
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Channels", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        items(matchingChannels, key = { "search-channel-${it.channel.channelId}" }) { snapshot ->
+                            Surface(
+                                onClick = { onChannelClick(snapshot) },
+                                shape = RoundedCornerShape(10.dp),
+                                color = Color(0xFF272727),
+                            ) {
+                                Text(
+                                    snapshot.channel.displayName ?: snapshot.channel.name,
+                                    color = Color.White,
+                                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (matchingVideos.isNotEmpty()) {
+            item { IvyPlayYouTubeShelf("Videos", matchingVideos.take(30), onVideoClick) }
+        } else if (normalized.isNotBlank()) {
+            item { IvyPlayYouTubeTvPlaceholder("No results", "Không tìm thấy video hoặc kênh trong nguồn IvyPlay hiện tại") }
         }
     }
 }
