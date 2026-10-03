@@ -2,6 +2,7 @@ package com.nuvio.tv.core.player
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.util.Log
 import android.webkit.CookieManager
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
@@ -46,7 +47,7 @@ internal class Av01PlaybackResolver(private val context: Context) {
                         val url = request.url.toString()
                         if (url.contains("sv3-v1-a1.m3u8", true) &&
                             url.contains("access_token=", true)) {
-                            captured.compareAndSet(null, url)
+                            if (captured.compareAndSet(null, url)) Log.i("Av01Resolver", "captured sv3 for id=" + id + " host=" + request.url.host)
                         }
                         return null
                     }
