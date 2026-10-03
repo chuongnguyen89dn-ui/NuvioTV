@@ -36,8 +36,8 @@ jobs:
                   raise SystemExit('Import anchor not found')
               text = text.replace(anchor_import, anchor_import + import_line, 1)
 
-          start = '            HomeScreen(\n'
           if '            IvyPlayYouTubeHomeGate(\n' not in text:
+              start = '            HomeScreen(\n'
               if start not in text:
                   raise SystemExit('HomeScreen start anchor not found')
               text = text.replace(
@@ -49,24 +49,24 @@ jobs:
                   1,
               )
 
-              end = '''                onNavigateToFolderDetail = { collectionId, folderId ->
-                    navController.navigate(Screen.FolderDetail.createRoute(collectionId, folderId))
-                }
-            )
-        }
-
-        composable(
-'''
-              replacement = '''                onNavigateToFolderDetail = { collectionId, folderId ->
-                    navController.navigate(Screen.FolderDetail.createRoute(collectionId, folderId))
-                }
-                    )
-                }
-            )
-        }
-
-        composable(
-'''
+              end = (
+                  '                onNavigateToFolderDetail = { collectionId, folderId ->\n'
+                  '                    navController.navigate(Screen.FolderDetail.createRoute(collectionId, folderId))\n'
+                  '                }\n'
+                  '            )\n'
+                  '        }\n\n'
+                  '        composable(\n'
+              )
+              replacement = (
+                  '                onNavigateToFolderDetail = { collectionId, folderId ->\n'
+                  '                    navController.navigate(Screen.FolderDetail.createRoute(collectionId, folderId))\n'
+                  '                }\n'
+                  '                    )\n'
+                  '                }\n'
+                  '            )\n'
+                  '        }\n\n'
+                  '        composable(\n'
+              )
               if end not in text:
                   raise SystemExit('HomeScreen end anchor not found')
               text = text.replace(end, replacement, 1)
