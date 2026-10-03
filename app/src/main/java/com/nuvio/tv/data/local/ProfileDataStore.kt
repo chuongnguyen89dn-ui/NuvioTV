@@ -150,18 +150,26 @@ internal data class ProfileJson(
     val profileBackgroundUrl: String? = null,
     val contentMode: String? = null
 ) {
-    fun toDomain() = UserProfile(
-        id = id,
-        name = name,
-        avatarColorHex = avatarColorHex,
-        usesPrimaryAddons = usesPrimaryAddons,
-        usesPrimaryPlugins = usesPrimaryPlugins,
-        avatarId = avatarId,
-        avatarUrl = avatarUrl,
-        profileBackgroundId = profileBackgroundId,
-        profileBackgroundUrl = profileBackgroundUrl,
-        contentMode = IvyPlayContentMode.fromStorage(contentMode)
-    )
+    fun toDomain(): UserProfile {
+        val migratedContentMode = when {
+            !contentMode.isNullOrBlank() -> IvyPlayContentMode.fromStorage(contentMode)
+            name.trim().equals("YouTube", ignoreCase = true) -> IvyPlayContentMode.YOUTUBE
+            name.trim().equals("IvyPlay YouTube", ignoreCase = true) -> IvyPlayContentMode.YOUTUBE
+            else -> IvyPlayContentMode.STANDARD
+        }
+        return UserProfile(
+            id = id,
+            name = name,
+            avatarColorHex = avatarColorHex,
+            usesPrimaryAddons = usesPrimaryAddons,
+            usesPrimaryPlugins = usesPrimaryPlugins,
+            avatarId = avatarId,
+            avatarUrl = avatarUrl,
+            profileBackgroundId = profileBackgroundId,
+            profileBackgroundUrl = profileBackgroundUrl,
+            contentMode = migratedContentMode
+        )
+    }
 
     companion object {
         fun fromDomain(profile: UserProfile) = ProfileJson(
