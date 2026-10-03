@@ -2,15 +2,16 @@ package com.nuvio.tv.data.local
 
 import android.content.Context
 import androidx.datastore.core.DataStore
+import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
-import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.preferencesDataStore
 import com.nuvio.tv.R
+import com.nuvio.tv.domain.model.IvyPlayContentMode
 import com.nuvio.tv.domain.model.UserProfile
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
@@ -46,32 +47,14 @@ class ProfileDataStore @Inject constructor(
 
     val profilesList: Flow<List<UserProfile>> = dataStore.data.map { prefs ->
         val json = prefs[profilesJsonKey]
-        if (json != null) {
-            parseProfiles(json)
-        } else {
-            listOf(defaultPrimaryProfile())
-        }
+        if (json != null) parseProfiles(json) else listOf(defaultPrimaryProfile())
     }
 
-    val activeProfileId: Flow<Int> = dataStore.data.map { prefs ->
-        prefs[activeProfileIdKey] ?: 1
-    }
-
-    val hasEverSelectedProfile: Flow<Boolean> = dataStore.data.map { prefs ->
-        prefs[hasEverSelectedProfileKey] ?: false
-    }
-
-    val rememberLastProfileEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
-        prefs[rememberLastProfileEnabledKey] ?: false
-    }
-
-    val confirmExitEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
-        prefs[confirmExitEnabledKey] ?: false
-    }
-
-    val startupSplashEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
-        prefs[startupSplashEnabledKey] ?: true
-    }
+    val activeProfileId: Flow<Int> = dataStore.data.map { prefs -> prefs[activeProfileIdKey] ?: 1 }
+    val hasEverSelectedProfile: Flow<Boolean> = dataStore.data.map { prefs -> prefs[hasEverSelectedProfileKey] ?: false }
+    val rememberLastProfileEnabled: Flow<Boolean> = dataStore.data.map { prefs -> prefs[rememberLastProfileEnabledKey] ?: false }
+    val confirmExitEnabled: Flow<Boolean> = dataStore.data.map { prefs -> prefs[confirmExitEnabledKey] ?: false }
+    val startupSplashEnabled: Flow<Boolean> = dataStore.data.map { prefs -> prefs[startupSplashEnabledKey] ?: true }
 
     suspend fun setActiveProfile(id: Int) {
         dataStore.edit { prefs ->
@@ -81,32 +64,22 @@ class ProfileDataStore @Inject constructor(
     }
 
     suspend fun setRememberLastProfileEnabled(enabled: Boolean) {
-        dataStore.edit { prefs ->
-            prefs[rememberLastProfileEnabledKey] = enabled
-        }
+        dataStore.edit { prefs -> prefs[rememberLastProfileEnabledKey] = enabled }
     }
 
     suspend fun setConfirmExitEnabled(enabled: Boolean) {
-        dataStore.edit { prefs ->
-            prefs[confirmExitEnabledKey] = enabled
-        }
+        dataStore.edit { prefs -> prefs[confirmExitEnabledKey] = enabled }
     }
 
     suspend fun setStartupSplashEnabled(enabled: Boolean) {
-        dataStore.edit { prefs ->
-            prefs[startupSplashEnabledKey] = enabled
-        }
+        dataStore.edit { prefs -> prefs[startupSplashEnabledKey] = enabled }
     }
 
     suspend fun upsertProfile(profile: UserProfile) {
         dataStore.edit { prefs ->
             val current = parseProfiles(prefs[profilesJsonKey]).toMutableList()
             val index = current.indexOfFirst { it.id == profile.id }
-            if (index >= 0) {
-                current[index] = profile
-            } else {
-                current.add(profile)
-            }
+            if (index >= 0) current[index] = profile else current.add(profile)
             prefs[profilesJsonKey] = serializeProfiles(current)
         }
     }
@@ -117,9 +90,7 @@ class ProfileDataStore @Inject constructor(
             val current = parseProfiles(prefs[profilesJsonKey]).toMutableList()
             current.removeAll { it.id == id }
             prefs[profilesJsonKey] = serializeProfiles(current)
-            if ((prefs[activeProfileIdKey] ?: 1) == id) {
-                prefs[activeProfileIdKey] = 1
-            }
+            if ((prefs[activeProfileIdKey] ?: 1) == id) prefs[activeProfileIdKey] = 1
         }
     }
 
@@ -128,22 +99,19 @@ class ProfileDataStore @Inject constructor(
             val normalizedProfiles = normalizeProfiles(profiles)
             prefs[profilesJsonKey] = serializeProfiles(normalizedProfiles)
             val activeId = prefs[activeProfileIdKey] ?: 1
-            if (normalizedProfiles.none { it.id == activeId }) {
-                prefs[activeProfileIdKey] = 1
-            }
+            if (normalizedProfiles.none { it.id == activeId }) prefs[activeProfileIdKey] = 1
         }
     }
 
     suspend fun clearAll() {
-        dataStore.edit { prefs ->
-            prefs.clear()
-        }
+        dataStore.edit { prefs -> prefs.clear() }
     }
 
     private fun defaultPrimaryProfile() = UserProfile(
         id = 1,
         name = context.getString(R.string.profile_default_name, 1),
-        avatarColorHex = "#1E88E5"
+        avatarColorHex = "#1E88E5",
+        contentMode = IvyPlayContentMode.STANDARD
     )
 
     private fun parseProfiles(json: String?): List<UserProfile> {
@@ -179,7 +147,8 @@ internal data class ProfileJson(
     val avatarId: String? = null,
     val avatarUrl: String? = null,
     val profileBackgroundId: String? = null,
-    val profileBackgroundUrl: String? = null
+    val profileBackgroundUrl: String? = null,
+    val contentMode: String? = null
 ) {
     fun toDomain() = UserProfile(
         id = id,
@@ -190,7 +159,8 @@ internal data class ProfileJson(
         avatarId = avatarId,
         avatarUrl = avatarUrl,
         profileBackgroundId = profileBackgroundId,
-        profileBackgroundUrl = profileBackgroundUrl
+        profileBackgroundUrl = profileBackgroundUrl,
+        contentMode = IvyPlayContentMode.fromStorage(contentMode)
     )
 
     companion object {
@@ -203,7 +173,8 @@ internal data class ProfileJson(
             avatarId = profile.avatarId,
             avatarUrl = profile.avatarUrl,
             profileBackgroundId = profile.profileBackgroundId,
-            profileBackgroundUrl = profile.profileBackgroundUrl
+            profileBackgroundUrl = profile.profileBackgroundUrl,
+            contentMode = profile.contentMode.name
         )
     }
 }
