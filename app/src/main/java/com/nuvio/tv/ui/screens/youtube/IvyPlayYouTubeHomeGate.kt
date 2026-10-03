@@ -1,8 +1,11 @@
 package com.nuvio.tv.ui.screens.youtube
 
 import android.widget.Toast
+import androidx.compose.foundation.focusGroup
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -29,6 +32,9 @@ fun IvyPlayYouTubeHomeGate(
     when (contentMode) {
         IvyPlayContentMode.STANDARD -> standardContent()
         IvyPlayContentMode.YOUTUBE -> IvyPlayYouTubeTvScreen(
+            modifier = Modifier
+                .focusRestorer()
+                .focusGroup(),
             profileName = profileName,
             onProfileClick = {
                 navController.navigate(Screen.ProfileSelection.route)
