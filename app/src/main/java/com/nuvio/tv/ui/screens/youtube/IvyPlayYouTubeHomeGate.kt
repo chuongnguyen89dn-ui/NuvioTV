@@ -30,6 +30,9 @@ fun IvyPlayYouTubeHomeGate(
         IvyPlayContentMode.STANDARD -> standardContent()
         IvyPlayContentMode.YOUTUBE -> IvyPlayYouTubeTvScreen(
             profileName = profileName,
+            onProfileClick = {
+                navController.navigate(Screen.ProfileSelection.route)
+            },
             onVideoClick = { video ->
                 playbackViewModel.resolve(video.url) { resolvedUrl ->
                     if (resolvedUrl.isNullOrBlank()) {
