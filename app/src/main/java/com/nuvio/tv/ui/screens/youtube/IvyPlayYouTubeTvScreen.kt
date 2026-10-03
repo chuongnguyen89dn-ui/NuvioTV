@@ -1,12 +1,14 @@
 package com.nuvio.tv.ui.screens.youtube
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,6 +16,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -27,6 +32,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,12 +40,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
 
 private enum class IvyPlayYouTubeTvTab(val label: String, val icon: ImageVector) {
     HOME("Home", Icons.Default.Home),
@@ -51,8 +61,14 @@ private enum class IvyPlayYouTubeTvTab(val label: String, val icon: ImageVector)
 @Composable
 fun IvyPlayYouTubeTvScreen(
     modifier: Modifier = Modifier,
+    onVideoClick: (IvyPlayYouTubeVideo) -> Unit = {},
 ) {
     var selectedTab by remember { mutableStateOf(IvyPlayYouTubeTvTab.HOME) }
+    var channels by remember { mutableStateOf<List<IvyPlayYouTubeChannelSnapshot>>(emptyList()) }
+
+    LaunchedEffect(Unit) {
+        channels = IvyPlayYouTubeFeedRepository.loadDefaultChannels()
+    }
 
     Row(modifier.fillMaxSize().background(Color.Black)) {
         Column(
@@ -105,13 +121,119 @@ fun IvyPlayYouTubeTvScreen(
 
             Box(Modifier.fillMaxSize().padding(horizontal = 28.dp, vertical = 18.dp)) {
                 when (selectedTab) {
-                    IvyPlayYouTubeTvTab.HOME -> IvyPlayYouTubeTvPlaceholder("Home", "Đang đồng bộ feed YouTube từ IvyPlay mobile")
-                    IvyPlayYouTubeTvTab.SHORTS -> IvyPlayYouTubeTvPlaceholder("Shorts", "Shorts sẽ dùng cùng dữ liệu với bản mobile")
-                    IvyPlayYouTubeTvTab.SUBSCRIPTIONS -> IvyPlayYouTubeTvPlaceholder("Subscriptions", "Subscriptions sẽ dùng cùng profile và nguồn dữ liệu")
-                    IvyPlayYouTubeTvTab.YOU -> IvyPlayYouTubeTvPlaceholder("You", "Profile YouTube đang được nối với hệ thống profile TV")
+                    IvyPlayYouTubeTvTab.HOME -> IvyPlayYouTubeHomeContent(channels, onVideoClick)
+                    IvyPlayYouTubeTvTab.SHORTS -> IvyPlayYouTubeTvPlaceholder("Shorts", "Shorts đang được đồng bộ cùng nguồn dữ liệu mobile")
+                    IvyPlayYouTubeTvTab.SUBSCRIPTIONS -> IvyPlayYouTubeSubscriptionsContent(channels, onVideoClick)
+                    IvyPlayYouTubeTvTab.YOU -> IvyPlayYouTubeTvPlaceholder("You", "Profile YouTube dùng chung hệ thống profile IvyPlay")
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun IvyPlayYouTubeHomeContent(
+    channels: List<IvyPlayYouTubeChannelSnapshot>,
+    onVideoClick: (IvyPlayYouTubeVideo) -> Unit,
+) {
+    if (channels.isEmpty()) {
+        IvyPlayYouTubeTvPlaceholder("Home", "Đang tải Khoai Lang Thang và HOA BAN FOOD…")
+        return
+    }
+    LazyColumn(verticalArrangement = Arrangement.spacedBy(28.dp)) {
+        val recommended = channels.flatMap { it.videos }.distinctBy { it.videoId }.take(12)
+        if (recommended.isNotEmpty()) {
+            item { IvyPlayYouTubeShelf("Recommended", recommended, onVideoClick) }
+        }
+        channels.forEach { snapshot ->
+            item(key = snapshot.channel.channelId) {
+                IvyPlayYouTubeShelf(
+                    snapshot.channel.displayName ?: snapshot.channel.name,
+                    snapshot.videos.take(10),
+                    onVideoClick,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun IvyPlayYouTubeSubscriptionsContent(
+    channels: List<IvyPlayYouTubeChannelSnapshot>,
+    onVideoClick: (IvyPlayYouTubeVideo) -> Unit,
+) {
+    if (channels.isEmpty()) {
+        IvyPlayYouTubeTvPlaceholder("Subscriptions", "Đang tải kênh đã theo dõi…")
+        return
+    }
+    LazyColumn(verticalArrangement = Arrangement.spacedBy(28.dp)) {
+        channels.forEach { snapshot ->
+            item(key = "sub-${snapshot.channel.channelId}") {
+                IvyPlayYouTubeShelf(
+                    snapshot.channel.displayName ?: snapshot.channel.name,
+                    snapshot.videos.take(10),
+                    onVideoClick,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun IvyPlayYouTubeShelf(
+    title: String,
+    videos: List<IvyPlayYouTubeVideo>,
+    onVideoClick: (IvyPlayYouTubeVideo) -> Unit,
+) {
+    Column {
+        Text(title, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(14.dp))
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+            items(videos, key = { it.videoId }) { video ->
+                IvyPlayYouTubeVideoCard(video, onVideoClick)
+            }
+        }
+    }
+}
+
+@Composable
+private fun IvyPlayYouTubeVideoCard(
+    video: IvyPlayYouTubeVideo,
+    onVideoClick: (IvyPlayYouTubeVideo) -> Unit,
+) {
+    var focused by remember { mutableStateOf(false) }
+    Column(
+        modifier = Modifier.width(300.dp)
+            .scale(if (focused) 1.06f else 1f)
+            .onFocusChanged { focused = it.isFocused }
+            .focusable()
+            .clickable { onVideoClick(video) },
+    ) {
+        AsyncImage(
+            model = video.thumbnail ?: "https://i.ytimg.com/vi/${video.videoId}/hqdefault.jpg",
+            contentDescription = video.title,
+            modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f)
+                .clip(RoundedCornerShape(12.dp))
+                .background(Color(0xFF202020)),
+            contentScale = ContentScale.Crop,
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = video.title,
+            color = Color.White,
+            fontSize = 16.sp,
+            fontWeight = if (focused) FontWeight.Bold else FontWeight.Medium,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = video.channelName.orEmpty(),
+            color = Color(0xFFAAAAAA),
+            fontSize = 13.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
@@ -131,9 +253,7 @@ private fun IvyPlayYouTubeTvNavItem(
 
     Surface(
         onClick = onClick,
-        modifier = Modifier.width(104.dp)
-            .onFocusChanged { focused = it.isFocused }
-            .focusable(),
+        modifier = Modifier.width(104.dp).onFocusChanged { focused = it.isFocused },
         shape = RoundedCornerShape(12.dp),
         color = background,
     ) {
