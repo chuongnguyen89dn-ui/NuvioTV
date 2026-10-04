@@ -15,6 +15,7 @@ import com.nuvio.tv.data.remote.supabase.ProfileBackgroundRepository
 import com.nuvio.tv.data.remote.supabase.SupabaseProfilePinVerifyResult
 import com.nuvio.tv.data.repository.MemberAccessRepository
 import com.nuvio.tv.domain.model.CosmeticEntitlement
+import com.nuvio.tv.domain.model.IvyPlayContentMode
 import com.nuvio.tv.domain.model.UserProfile
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
@@ -192,10 +193,17 @@ class ProfileSelectionViewModel @Inject constructor(
         viewModelScope.launch {
             _isCreating.value = true
             val result = try {
+                val normalizedName = name.trim()
+                val contentMode = when {
+                    normalizedName.equals("YouTube", ignoreCase = true) -> IvyPlayContentMode.YOUTUBE
+                    normalizedName.equals("IvyPlay YouTube", ignoreCase = true) -> IvyPlayContentMode.YOUTUBE
+                    else -> IvyPlayContentMode.STANDARD
+                }
                 val profile = profileManager.createProfile(
                     name = name,
                     avatarColorHex = avatarColorHex,
-                    avatarId = avatarId
+                    avatarId = avatarId,
+                    contentMode = contentMode
                 )
                 if (profile != null) {
                     profileSyncService.pushToRemote()
@@ -299,8 +307,6 @@ class ProfileSelectionViewModel @Inject constructor(
         viewModelScope.launch {
             _isPinOperationInProgress.value = true
             val result = profileSyncService.setProfilePin(profileId, pin, currentPin)
-            // Server reporting CurrentPinRequired means a PIN exists remotely —
-            // reconcile local cache so we never forget it again.
             if (result is SetProfilePinResult.Success || result is SetProfilePinResult.CurrentPinRequired) {
                 profileLockStateDataStore.setPinEnabled(profileId, true)
             }
