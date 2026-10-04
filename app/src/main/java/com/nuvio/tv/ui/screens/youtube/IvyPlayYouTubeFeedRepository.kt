@@ -199,18 +199,18 @@ object IvyPlayYouTubeFeedRepository {
 
     // Keep renderer matches bounded so one malformed page cannot swallow the full ytInitialData payload.
     private val SHORT_RENDERER_REGEX = Regex(
-        "\\\"(?:reelItemRenderer|shortsLockupViewModel)\\\"\\s*:\\s*\\{(.{0,5000}?)\\}\s*(?:,|\\})",
+        """(?:reelItemRenderer|shortsLockupViewModel)"\s*:\s*\{(.{0,5000}?)\}\s*(?:,|\})""",
         setOf(RegexOption.DOT_MATCHES_ALL),
     )
     private val VIDEO_RENDERER_REGEX = Regex(
-        "\\\"videoRenderer\\\"\\s*:\\s*\\{(.{0,9000}?)\\}\s*(?:,|\\})",
+        """videoRenderer"\s*:\s*\{(.{0,9000}?)\}\s*(?:,|\})""",
         setOf(RegexOption.DOT_MATCHES_ALL),
     )
-    private val VIDEO_ID_REGEX = Regex("\\\"videoId\\\"\\s*:\\s*\\\"([A-Za-z0-9_-]{6,20})\\\"")
-    private val SIMPLE_TEXT_REGEX = Regex("\\\"simpleText\\\"\\s*:\\s*\\\"([^\\\"]+)\\\"")
-    private val RUN_TEXT_REGEX = Regex("\\\"text\\\"\\s*:\\s*\\\"([^\\\"]+)\\\"")
+    private val VIDEO_ID_REGEX = Regex("""videoId"\s*:\s*"([A-Za-z0-9_-]{6,20})""")
+    private val SIMPLE_TEXT_REGEX = Regex("""simpleText"\s*:\s*"([^"]+)""")
+    private val RUN_TEXT_REGEX = Regex("""text"\s*:\s*"([^"]+)""")
     private val CHANNEL_TEXT_REGEX = Regex(
-        "\\\"ownerText\\\".{0,1200}?\\\"text\\\"\\s*:\\s*\\\"([^\\\"]+)\\\"",
+        """ownerText".{0,1200}?text"\s*:\s*"([^"]+)""",
         setOf(RegexOption.DOT_MATCHES_ALL),
     )
 }
