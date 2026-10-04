@@ -53,6 +53,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import kotlinx.coroutines.delay
 
 private enum class IvyPlayYouTubeTvTab(val label: String, val icon: ImageVector) {
     HOME("Home", Icons.Default.Home),
@@ -73,9 +74,26 @@ fun IvyPlayYouTubeTvScreen(
     var selectedChannel by remember { mutableStateOf<IvyPlayYouTubeChannelSnapshot?>(null) }
     var searchMode by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
+    var remoteSearchResults by remember { mutableStateOf<List<IvyPlayYouTubeVideo>>(emptyList()) }
+    var remoteSearchLoading by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         channels = IvyPlayYouTubeFeedRepository.loadDefaultChannels()
+    }
+
+    LaunchedEffect(searchMode, searchQuery) {
+        val normalized = searchQuery.trim()
+        if (!searchMode || normalized.length < 2) {
+            remoteSearchResults = emptyList()
+            remoteSearchLoading = false
+            return@LaunchedEffect
+        }
+        delay(350)
+        remoteSearchLoading = true
+        remoteSearchResults = runCatching {
+            IvyPlayYouTubeFeedRepository.searchYouTube(normalized)
+        }.getOrDefault(emptyList())
+        remoteSearchLoading = false
     }
 
     BackHandler(enabled = selectedChannel != null || searchMode) {
@@ -84,6 +102,7 @@ fun IvyPlayYouTubeTvScreen(
             searchMode -> {
                 searchMode = false
                 searchQuery = ""
+                remoteSearchResults = emptyList()
             }
         }
     }
@@ -108,6 +127,7 @@ fun IvyPlayYouTubeTvScreen(
                     onClick = {
                         searchMode = false
                         searchQuery = ""
+                        remoteSearchResults = emptyList()
                         selectedChannel = null
                         selectedTab = tab
                     },
@@ -165,6 +185,8 @@ fun IvyPlayYouTubeTvScreen(
                     searchMode -> IvyPlayYouTubeSearchContent(
                         channels = channels,
                         query = searchQuery,
+                        remoteResults = remoteSearchResults,
+                        remoteLoading = remoteSearchLoading,
                         onQueryChange = { searchQuery = it },
                         onVideoClick = onVideoClick,
                         onChannelClick = {
@@ -200,6 +222,8 @@ fun IvyPlayYouTubeTvScreen(
 private fun IvyPlayYouTubeSearchContent(
     channels: List<IvyPlayYouTubeChannelSnapshot>,
     query: String,
+    remoteResults: List<IvyPlayYouTubeVideo>,
+    remoteLoading: Boolean,
     onQueryChange: (String) -> Unit,
     onVideoClick: (IvyPlayYouTubeVideo) -> Unit,
     onChannelClick: (IvyPlayYouTubeChannelSnapshot) -> Unit,
@@ -214,7 +238,7 @@ private fun IvyPlayYouTubeSearchContent(
                 it.channel.handle.orEmpty().contains(normalized, ignoreCase = true)
         }
     }
-    val matchingVideos = channels
+    val localVideos = channels
         .flatMap { it.videos + it.shorts + it.live }
         .distinctBy { it.videoId }
         .filter {
@@ -222,11 +246,12 @@ private fun IvyPlayYouTubeSearchContent(
                 it.title.contains(normalized, ignoreCase = true) ||
                 it.channelName.orEmpty().contains(normalized, ignoreCase = true)
         }
+    val matchingVideos = (localVideos + remoteResults).distinctBy { it.videoId }
 
     LazyColumn(verticalArrangement = Arrangement.spacedBy(24.dp)) {
         item {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Search", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+                Text("Search YouTube", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
                 OutlinedTextField(
                     value = query,
                     onValueChange = onQueryChange,
@@ -235,12 +260,15 @@ private fun IvyPlayYouTubeSearchContent(
                     placeholder = { Text("Search videos or channels") },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 )
+                if (remoteLoading) {
+                    Text("Searching YouTube…", color = Color(0xFFAAAAAA), fontSize = 14.sp)
+                }
             }
         }
         if (matchingChannels.isNotEmpty()) {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Channels", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+                    Text("Your channels", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         items(matchingChannels, key = { "search-channel-${it.channel.channelId}" }) { snapshot ->
                             Surface(
@@ -261,8 +289,8 @@ private fun IvyPlayYouTubeSearchContent(
         }
         if (matchingVideos.isNotEmpty()) {
             item { IvyPlayYouTubeShelf("Videos", matchingVideos.take(30), onVideoClick) }
-        } else if (normalized.isNotBlank()) {
-            item { IvyPlayYouTubeTvPlaceholder("No results", "Không tìm thấy video hoặc kênh trong nguồn IvyPlay hiện tại") }
+        } else if (normalized.length >= 2 && !remoteLoading) {
+            item { IvyPlayYouTubeTvPlaceholder("No results", "Không tìm thấy video phù hợp trên YouTube") }
         }
     }
 }
@@ -304,7 +332,7 @@ private fun IvyPlayYouTubeShortsContent(
     if (shorts.isEmpty()) {
         IvyPlayYouTubeTvPlaceholder(
             "Shorts",
-            "Nguồn YouTube hiện chưa trả danh sách Shorts riêng. IvyPlayTV sẽ hiển thị khi resolver đồng bộ được dữ liệu Shorts.",
+            "Không lấy được Shorts từ YouTube lúc này. Hãy thử lại sau.",
         )
         return
     }
@@ -390,13 +418,16 @@ private fun IvyPlayYouTubeYouContent(
     channels: List<IvyPlayYouTubeChannelSnapshot>,
     onProfileClick: () -> Unit,
 ) {
+    val videoCount = channels.sumOf { it.videos.size }
+    val shortsCount = channels.sumOf { it.shorts.size }
+    val liveCount = channels.sumOf { it.live.size }
     Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
         Text(profileName, color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
         Text("IvyPlay YouTube profile", color = Color(0xFFAAAAAA), fontSize = 18.sp)
         Spacer(Modifier.height(8.dp))
         Text("Subscriptions", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
         Text(
-            if (channels.isEmpty()) "Đang tải…" else "${channels.size} kênh đang được đồng bộ trên TV",
+            if (channels.isEmpty()) "Đang tải…" else "${channels.size} channels · $videoCount videos · $shortsCount Shorts · $liveCount live/streams",
             color = Color(0xFFAAAAAA),
             fontSize = 16.sp,
         )
